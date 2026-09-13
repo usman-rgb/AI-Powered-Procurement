@@ -453,7 +453,6 @@ python-multipart==0.0.22
 python-oxmsg==0.0.2
 pytokens==0.4.1
 pytz==2022.7.1
-pywin32==311
 pywinpty==3.0.2
 PyYAML==6.0.3
 pyzmq==27.1.0
