@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}ProcureAI - Intelligent Procurement Command Center{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ProcureAI Logo" class="brand-logo-img">
+                <div>
+                    <h2>Procure<span class="gradient-text">AI</span></h2>
+                    <p class="brand-subtitle">Smart Procurement Ops</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a href="/" class="nav-item {{ 'active' if request.path in ['/', '/dashboard'] else '' }}">
+                    <span class="nav-icon">📊</span>
+                    <span>Executive Dashboard</span>
+                </a>
+                <a href="/submit-request" class="nav-item {{ 'active' if request.path == '/submit-request' else '' }}">
+                    <span class="nav-icon">➕</span>
+                    <span>Submit Requisition</span>
+                </a>
+                <a href="/inventory" class="nav-item {{ 'active' if (request.path in ['/inventory', '/inventory-management'] and not request.args.get('tab')) else '' }}">
+                    <span class="nav-icon">📦</span>
+                    <span>Inventory Catalog</span>
+                </a>
+                <a href="/analytics" class="nav-item {{ 'active' if (request.path == '/analytics' or request.args.get('tab') == 'analytics') else '' }}">
+                    <span class="nav-icon">📈</span>
+                    <span>Inventory Analytics</span>
+                </a>
+                <a href="/history" class="nav-item {{ 'active' if (request.path in ['/history', '/audit-trail'] or request.args.get('tab') == 'history') else '' }}">
+                    <span class="nav-icon">📜</span>
+                    <span>Stock Audit Trail</span>
+                </a>
+                <a href="/overview#inventory" class="nav-item {{ 'active' if request.path == '/overview' else '' }}">
+                    <span class="nav-icon">🏢</span>
+                    <span>Multi-Warehouse Stock</span>
+                </a>
+                <a href="/overview#budgets" class="nav-item">
+                    <span class="nav-icon">💰</span>
+                    <span>Department Budgets</span>
+                </a>
+                <a href="/profile" class="nav-item {{ 'active' if request.path == '/profile' else '' }}">
+                    <span class="nav-icon">👤</span>
+                    <span>Manager Profile</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card">
+                    <a href="/profile" class="user-avatar-link" title="Edit Profile & Preferences">
+                        <div class="user-avatar-badge">{{ session.get('user_initials', 'US') }}</div>
+                    </a>
+                    <a href="/profile" class="user-meta-link" title="Edit Profile & Preferences">
+                        <div class="user-meta">
+                            <span class="user-name">{{ session.get('user_name', 'Enterprise User') }}</span>
+                            <span class="user-title">{{ session.get('user_role', 'Requester') }}</span>
+                        </div>
+                    </a>
+                    <div class="sidebar-user-actions">
+                        <a href="/profile" class="btn-sidebar-icon" title="Customize Profile">
+                            <span>✏️</span>
+                        </a>
+                        <a href="{{ url_for('auth.logout') }}" class="btn-sidebar-logout" title="Sign Out of Session">
+                            <span>🚪</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="topbar-title">
+                    <h1>{% block page_header %}Procurement Command Center{% endblock %}</h1>
+                    <p class="topbar-subtitle">
+                        {% if session.get('user_role') == 'Procurement Director' %}
+                            Executive oversight: Real-time inventory intelligence, budget controls, and AI risk scoring
+                        {% else %}
+                            Requisition hub: Track submitted purchase requests, view AI validation risk scores, and check order statuses
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="topbar-actions">
+                    <div class="topbar-status-chip">
+                        <span class="status-dot-pulse"></span>
+                        <span>Enterprise Cloud Active</span>
+                    </div>
+                    <a href="/submit-request" class="btn btn-sm btn-primary">
+                        <span>➕</span> New Requisition
+                    </a>
+                    <a href="/profile" class="btn btn-sm btn-outline {{ 'btn-active' if request.path == '/profile' else '' }}" title="Manager Profile & Settings">
+                        <span>👤</span> Profile
+                    </a>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-sm btn-outline" title="Sign out of {{ session.get('user_name', 'account') }}">
+                        <span>🚪</span> Sign Out
+                    </a>
+                </div>
+            </header>
+
+            <div class="content-container">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

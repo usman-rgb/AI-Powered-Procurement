@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}Manager Profile & Procurement Authority - ProcureAI{% endblock %}
+{% block page_header %}Manager Profile & Authority Center{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <!-- Feedback Alert Banner -->
+    <div id="profileAlertBanner" class="alert d-none" role="alert">
+        <span id="profileAlertIcon">✓</span>
+        <span id="profileAlertMessage">Profile updated successfully.</span>
+    </div>
+
+    <div class="profile-grid">
+        <!-- ================================================================= -->
+        <!-- LEFT COLUMN: Manager Identity Snapshot Card                       -->
+        <!-- ================================================================= -->
+        <aside class="profile-sidebar-col">
+            <div class="profile-card profile-identity-card">
+                <div class="profile-avatar-wrapper">
+                    <div class="profile-avatar-lg" id="avatarPreviewBadge">
+                        {{ user.initials or 'US' }}
+                    </div>
+                    <div class="avatar-status-indicator" title="Active Enterprise Session"></div>
+                </div>
+
+                <h2 class="profile-user-name" id="displayUserName">{{ user.name }}</h2>
+                <p class="profile-user-title" id="displayUserJobTitle">{{ user.job_title or 'Procurement Officer' }}</p>
+
+                <div class="profile-badges-row">
+                    <span class="badge badge-role badge-role-director" id="displayUserRole">
+                        {{ user.role }}
+                    </span>
+                    <span class="badge badge-dept" id="displayUserDept">
+                        {{ user.department }}
+                    </span>
+                </div>
+
+                <div class="profile-divider"></div>
+
+                <!-- Authority Snapshot Metrics -->
+                <div class="profile-snapshot-metrics">
+                    <div class="snapshot-metric-item">
+                        <span class="snapshot-metric-label">Approval Limit</span>
+                        <span class="snapshot-metric-value text-success font-mono" id="displaySpendingLimit">
+                            ${{ "{:,.0f}".format(user.spending_limit or 50000) }}
+                        </span>
+                    </div>
+                    <div class="snapshot-metric-item">
+                        <span class="snapshot-metric-label">Assigned Hub</span>
+                        <span class="snapshot-metric-value text-primary" id="displayWarehouse">
+                            {{ user.preferred_warehouse or 'ALL HUBS' }}
+                        </span>
+                    </div>
+                    <div class="snapshot-metric-item">
+                        <span class="snapshot-metric-label">AI Auto-Pilot</span>
+                        <span class="snapshot-metric-value text-amber" id="displayAutopilot">
+                            {{ 'ENABLED' if user.ai_autopilot_enabled else 'MANUAL' }}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="profile-divider"></div>
+
+                <!-- Corporate Credentials Info -->
+                <div class="profile-info-list">
+                    <div class="profile-info-item">
+                        <span class="info-icon">✉️</span>
+                        <div class="info-content">
+                            <span class="info-label">Corporate Email</span>
+                            <span class="info-value font-mono">{{ user.email }}</span>
+                        </div>
+                    </div>
+                    <div class="profile-info-item">
+                        <span class="info-icon">🏢</span>
+                        <div class="info-content">
+                            <span class="info-label">Office Desk / Facility</span>
+                            <span class="info-value" id="displayOffice">{{ user.office_location or 'HQ Tower' }}</span>
+                        </div>
+                    </div>
+                    <div class="profile-info-item">
+                        <span class="info-icon">🛡️</span>
+                        <div class="info-content">
+                            <span class="info-label">Identity Provider</span>
+                            <span class="info-value text-capitalize">{{ user.auth_provider or 'Google SSO' }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-card-footer">
+                    <span class="security-chip">🔒 End-to-End Encrypted Identity</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ================================================================= -->
+        <!-- RIGHT COLUMN: Interactive Profile Customization Form             -->
+        <!-- ================================================================= -->
+        <main class="profile-main-col">
+            <form id="profileForm" novalidate>
+                <!-- Card 1: Personal & Executive Profile -->
+                <div class="profile-card">
+                    <div class="profile-section-header">
+                        <div>
+                            <h3 class="profile-section-title">
+                                <span class="section-icon">👤</span> Executive Profile & Identification
+                            </h3>
+                            <p class="profile-section-desc">
+                                Update your corporate display name, job title, and regional departmental assignment.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="profile-form-grid">
+                        <!-- Full Name -->
+                        <div class="form-group">
+                            <label for="inputName" class="form-label required">Full Name</label>
+                            <input 
+                                type="text" 
+                                id="inputName" 
+                                name="name" 
+                                class="form-control" 
+                                value="{{ user.name }}" 
+                                placeholder="Enter your full corporate name..." 
+                                required
+                            >
+                            <span class="form-help-text">Avatar initials update automatically as you type.</span>
+                        </div>
+
+                        <!-- Job Title -->
+                        <div class="form-group">
+                            <label for="inputJobTitle" class="form-label">Corporate Job Title</label>
+                            <input 
+                                type="text" 
+                                id="inputJobTitle" 
+                                name="job_title" 
+                                class="form-control" 
+                                value="{{ user.job_title }}" 
+                                placeholder="e.g. Procurement Director, VP of Supply Chain"
+                            >
+                        </div>
+
+                        <!-- Department -->
+                        <div class="form-group">
+                            <label for="selectDepartment" class="form-label required">Department</label>
+                            <select id="selectDepartment" name="department" class="form-control" required>
+                                <option value="Supply Chain & Procurement" {{ 'selected' if user.department == 'Supply Chain & Procurement' else '' }}>Supply Chain & Procurement</option>
+                                <option value="Engineering" {{ 'selected' if user.department == 'Engineering' else '' }}>Engineering</option>
+                                <option value="Operations" {{ 'selected' if user.department == 'Operations' else '' }}>Operations</option>
+                                <option value="IT" {{ 'selected' if user.department in ['IT', 'Information Technology'] else '' }}>Information Technology (IT)</option>
+                                <option value="Finance" {{ 'selected' if user.department == 'Finance' else '' }}>Finance & Accounting</option>
+                                <option value="Marketing" {{ 'selected' if user.department == 'Marketing' else '' }}>Marketing</option>
+                                <option value="Human Resources" {{ 'selected' if user.department in ['HR', 'Human Resources'] else '' }}>Human Resources</option>
+                            </select>
+                        </div>
+
+                        <!-- Direct Phone -->
+                        <div class="form-group">
+                            <label for="inputPhone" class="form-label">Direct Contact Phone</label>
+                            <input 
+                                type="tel" 
+                                id="inputPhone" 
+                                name="phone" 
+                                class="form-control" 
+                                value="{{ user.phone }}" 
+                                placeholder="+1 (555) 000-0000"
+                            >
+                        </div>
+
+                        <!-- Office Location -->
+                        <div class="form-group col-span-2">
+                            <label for="inputOfficeLocation" class="form-label">Office Location / Desk Coordinate</label>
+                            <input 
+                                type="text" 
+                                id="inputOfficeLocation" 
+                                name="office_location" 
+                                class="form-control" 
+                                value="{{ user.office_location }}" 
+                                placeholder="e.g. Austin Regional Campus, Building C - Executive Suite 402"
+                            >
+                        </div>
+
+                        <!-- Executive Bio -->
+                        <div class="form-group col-span-2">
+                            <label for="inputBio" class="form-label">Procurement Focus & Executive Bio</label>
+                            <textarea 
+                                id="inputBio" 
+                                name="bio" 
+                                class="form-control" 
+                                rows="3" 
+                                placeholder="Provide a brief summary of your procurement purview, category specializations, or team oversight..."
+                            >{{ user.bio }}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Procurement Authority & AI Auto-Pilot Controls -->
+                <div class="profile-card mt-4">
+                    <div class="profile-section-header">
+                        <div>
+                            <h3 class="profile-section-title">
+                                <span class="section-icon">⚖️</span> Approval Authority & AI Decision Thresholds
+                            </h3>
+                            <p class="profile-section-desc">
+                                Configure your per-requisition signing authority and automated AI triage parameters.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="profile-form-grid">
+                        <!-- Single Transaction Approval Limit -->
+                        <div class="form-group">
+                            <label for="inputSpendingLimit" class="form-label required">Single Approval Spending Authority (USD)</label>
+                            <div class="input-with-prefix">
+                                <span class="input-prefix">$</span>
+                                <input 
+                                    type="number" 
+                                    id="inputSpendingLimit" 
+                                    name="spending_limit" 
+                                    class="form-control font-mono" 
+                                    step="500" 
+                                    min="0" 
+                                    value="{{ user.spending_limit|int if user.spending_limit else 50000 }}" 
+                                    required
+                                >
+                            </div>
+                            <span class="form-help-text">Requisitions above this threshold trigger executive board escalation.</span>
+                        </div>
+
+                        <!-- Preferred Warehouse Facility -->
+                        <div class="form-group">
+                            <label for="selectWarehouse" class="form-label">Primary Warehouse Oversight</label>
+                            <select id="selectWarehouse" name="preferred_warehouse" class="form-control">
+                                <option value="ALL" {{ 'selected' if user.preferred_warehouse == 'ALL' else '' }}>All Regional Hubs (Global Oversight)</option>
+                                <option value="NORTH" {{ 'selected' if user.preferred_warehouse == 'NORTH' else '' }}>North Regional Hub (WH-NORTH-01)</option>
+                                <option value="EAST" {{ 'selected' if user.preferred_warehouse == 'EAST' else '' }}>East Facility (WH-EAST-02)</option>
+                                <option value="WEST" {{ 'selected' if user.preferred_warehouse == 'WEST' else '' }}>West Distribution Center (WH-WEST-03)</option>
+                            </select>
+                        </div>
+
+                        <!-- Toggle 1: AI Auto-Pilot Assistant -->
+                        <div class="form-group col-span-2">
+                            <div class="preference-toggle-card">
+                                <div class="toggle-info">
+                                    <span class="toggle-title">⚡ Continuous AI Risk & Reallocation Screening</span>
+                                    <p class="toggle-desc">
+                                        Enable AI auto-recommendations to flag duplicate requisitions, suggest multi-warehouse stock reductions, and alert on budget headroom depletion.
+                                    </p>
+                                </div>
+                                <label class="switch-control" for="checkAutopilot">
+                                    <input type="checkbox" id="checkAutopilot" name="ai_autopilot_enabled" {{ 'checked' if user.ai_autopilot_enabled else '' }}>
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Toggle 2: High Urgency Notifications -->
+                        <div class="form-group col-span-2">
+                            <div class="preference-toggle-card">
+                                <div class="toggle-info">
+                                    <span class="toggle-title">🔔 Urgent Risk & Critical Stock Alert Banners</span>
+                                    <p class="toggle-desc">
+                                        Receive real-time high-priority alerts on purchase requests with AI Criticality Scores above 80/100 or when regional safety inventory thresholds are breached.
+                                    </p>
+                                </div>
+                                <label class="switch-control" for="checkUrgentAlerts">
+                                    <input type="checkbox" id="checkUrgentAlerts" name="notification_urgency" checked>
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Action Bar -->
+                <div class="profile-actions-bar mt-4">
+                    <button type="button" class="btn btn-outline" id="btnResetProfile">
+                        <span>↺</span> Reset Form
+                    </button>
+                    <button type="submit" class="btn btn-primary btn-save-profile" id="btnSaveProfile">
+                        <span class="btn-spinner-xs d-none" id="saveSpinner"></span>
+                        <span id="saveBtnText">💾 Save Profile & Preferences</span>
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<!-- Profile Customization Controller -->
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}Submit Purchase Request - ProcureAI{% endblock %}
+
+{% block page_header %}Submit Purchase Request{% endblock %}
+
+{% block content %}
+<div class="form-page-container">
+    <div class="form-header-card">
+        <div class="form-header-content">
+            <h2>New Purchase Request</h2>
+            <p class="text-secondary">
+                Submit an equipment, supply, or service requisition for AI budget screening and managerial approval.
+            </p>
+        </div>
+        <div class="form-header-badge">
+            <span class="badge badge-info">Workflow: Pending Validation</span>
+        </div>
+    </div>
+
+    <!-- Feedback Message Container -->
+    <div id="formAlert" class="banner d-none" role="alert">
+        <div id="formAlertIcon" class="banner-icon"></div>
+        <div class="banner-body">
+            <h3 id="formAlertTitle"></h3>
+            <p id="formAlertMessage"></p>
+            <div id="formAlertActions" class="mt-2 d-none">
+                <a href="/" class="btn btn-sm btn-outline">View on Dashboard</a>
+                <button type="button" id="btnResetForm" class="btn btn-sm btn-primary">Submit Another Request</button>
+            </div>
+        </div>
+    </div>
+
+    <form id="purchaseRequestForm" class="procurement-form" novalidate>
+        <!-- Item Information Section -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <span class="section-step">1</span>
+                <h3>Item & Requisition Details</h3>
+            </div>
+
+            <div class="form-grid">
+                <!-- Item Name -->
+                <div class="form-group col-span-2">
+                    <label for="itemName" class="form-label required">Item / Service Name</label>
+                    <input 
+                        type="text" 
+                        id="itemName" 
+                        name="item_name" 
+                        class="form-control" 
+                        placeholder="Enter item or service description..." 
+                        required
+                    >
+                    <div class="form-feedback" id="itemNameFeedback"></div>
+                </div>
+
+                <!-- SKU / Item Code -->
+                <div class="form-group">
+                    <label for="sku" class="form-label required">SKU / Item Code</label>
+                    <input 
+                        type="text" 
+                        id="sku" 
+                        name="sku" 
+                        class="form-control font-mono" 
+                        placeholder="Enter or scan SKU code..." 
+                        required
+                    >
+                    <div class="form-feedback" id="skuFeedback"></div>
+                </div>
+
+                <!-- Category -->
+                <div class="form-group">
+                    <label for="category" class="form-label required">Category</label>
+                    <select id="category" name="category" class="form-control" required>
+                        <option value="" disabled selected>Select category...</option>
+                        <option value="Hardware">IT Hardware & Equipment</option>
+                        <option value="Software">Software & SaaS Licenses</option>
+                        <option value="Office Supplies">Office Supplies & Furniture</option>
+                        <option value="Networking">Networking Infrastructure</option>
+                        <option value="Services">Consulting & Professional Services</option>
+                        <option value="Raw Materials">Production & Raw Materials</option>
+                        <option value="Other">Other Requisition</option>
+                    </select>
+                    <div class="form-feedback" id="categoryFeedback"></div>
+                </div>
+
+                <!-- Quantity -->
+                <div class="form-group">
+                    <label for="quantity" class="form-label required">Quantity</label>
+                    <div class="input-with-icon">
+                        <input 
+                            type="number" 
+                            id="quantity" 
+                            name="quantity" 
+                            class="form-control" 
+                            min="1" 
+                            value="1" 
+                            required
+                        >
+                        <span class="input-unit">units</span>
+                    </div>
+                    <div class="form-feedback" id="quantityFeedback"></div>
+                </div>
+
+                <!-- Estimated Unit Price -->
+                <div class="form-group">
+                    <label for="estimatedPrice" class="form-label required">Estimated Unit Price (USD)</label>
+                    <div class="input-with-prefix">
+                        <span class="input-prefix">$</span>
+                        <input 
+                            type="number" 
+                            id="estimatedPrice" 
+                            name="estimated_price" 
+                            class="form-control" 
+                            step="0.01" 
+                            min="0.01" 
+                            placeholder="0.00" 
+                            required
+                        >
+                    </div>
+                    <div class="form-feedback" id="estimatedPriceFeedback"></div>
+                </div>
+
+                <!-- Live Total Cost Summary Card -->
+                <div class="form-group col-span-2">
+                    <div class="total-cost-card">
+                        <div class="total-cost-label">
+                            <span>Calculated Total Requisition Value</span>
+                            <span class="text-muted text-xs font-normal">(Quantity &times; Estimated Unit Price)</span>
+                        </div>
+                        <div class="total-cost-value font-mono" id="calculatedTotalDisplay">$0.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Allocation & Justification Section -->
+        <div class="form-section">
+            <div class="form-section-title">
+                <span class="section-step">2</span>
+                <h3>Allocation & Justification</h3>
+            </div>
+
+            <div class="form-grid">
+                <!-- Department -->
+                <div class="form-group">
+                    <label for="department" class="form-label required">Department</label>
+                    <select id="department" name="department" class="form-control" required>
+                        <option value="" disabled selected>Select department...</option>
+                        <option value="Engineering">Engineering</option>
+                        <option value="Operations">Operations</option>
+                        <option value="IT">Information Technology (IT)</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Finance">Finance & Accounting</option>
+                        <option value="HR">Human Resources</option>
+                    </select>
+                    <div class="form-feedback" id="departmentFeedback"></div>
+                </div>
+
+                <!-- Required Date -->
+                <div class="form-group">
+                    <label for="requiredDate" class="form-label required">Required Delivery Date</label>
+                    <input 
+                        type="date" 
+                        id="requiredDate" 
+                        name="required_date" 
+                        class="form-control" 
+                        required
+                    >
+                    <div class="form-feedback" id="requiredDateFeedback"></div>
+                </div>
+
+                <!-- Priority Level -->
+                <div class="form-group">
+                    <label for="priority" class="form-label">Priority Level</label>
+                    <select id="priority" name="priority" class="form-control">
+                        <option value="low">Low - Routine Stock</option>
+                        <option value="medium" selected>Medium - Normal Business Need</option>
+                        <option value="high">High - Project Critical</option>
+                        <option value="urgent">Urgent - Production Blocker</option>
+                    </select>
+                </div>
+
+                <!-- Requester Identifier -->
+                <div class="form-group">
+                    <label for="requesterName" class="form-label">Requester Name / ID</label>
+                    <input 
+                        type="text" 
+                        id="requesterName" 
+                        name="requester_name" 
+                        class="form-control" 
+                        value="{{ session.get('user_name', '') }}"
+                        placeholder="Enter requester full name or employee ID" 
+                    >
+                </div>
+
+                <!-- Purpose / Business Justification -->
+                <div class="form-group col-span-2">
+                    <label for="purpose" class="form-label required">Business Purpose & Justification</label>
+                    <textarea 
+                        id="purpose" 
+                        name="purpose" 
+                        rows="4" 
+                        class="form-control" 
+                        placeholder="Describe why this item is necessary, how it impacts operations, and any preferred vendor or quote details..."
+                        required
+                    ></textarea>
+                    <div class="form-feedback" id="purposeFeedback"></div>
+                    <span class="form-hint">
+                        💡 Our automated AI screening evaluates this justification against budget thresholds and vendor catalogs.
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit & Actions Bar -->
+        <div class="form-actions">
+            <a href="/" class="btn btn-outline">Cancel</a>
+            <button type="submit" id="btnSubmitRequest" class="btn btn-primary btn-lg">
+                <span id="btnSpinner" class="spinner d-none" aria-hidden="true"></span>
+                <span id="btnText">Submit Purchase Request</span>
+            </button>
+        </div>
+    </form>
+</div>
+<script src="{{ url_for('static', filename='js/request_form.js') }}"></script>
+{% endblock %}

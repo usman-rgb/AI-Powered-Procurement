@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block title %}Procurement Dashboard & AI Decision Center - ProcureAI{% endblock %}
+{% block page_header %}{% if session.get('user_role') == 'Procurement Director' %}Executive Procurement Dashboard{% else %}Procurement Requisitions & AI Decision Center{% endif %}{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Top Summary Metrics Bar -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-total">📋</div>
+            <div class="metric-info">
+                <span class="metric-label">Total Requests</span>
+                <span class="metric-value font-mono" id="metricTotalRequests">-</span>
+                <span class="metric-subtext">All-time requisitions</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-pending">⏳</div>
+            <div class="metric-info">
+                <span class="metric-label">Pending Review</span>
+                <span class="metric-value font-mono text-amber" id="metricPendingRequests">-</span>
+                <span class="metric-subtext">Awaiting manager action</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-approved">✅</div>
+            <div class="metric-info">
+                <span class="metric-label">Approved</span>
+                <span class="metric-value font-mono text-success" id="metricApprovedRequests">-</span>
+                <span class="metric-subtext">Passed AI & Manager</span>
+            </div>
+        </div>
+
+        <div class="metric-card">
+            <div class="metric-icon metric-icon-savings">💡</div>
+            <div class="metric-info">
+                <span class="metric-label">Identified AI Savings</span>
+                <span class="metric-value font-mono text-primary" id="metricIdentifiedSavings">$0</span>
+                <span class="metric-subtext">Via warehouse transfers & cuts</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table Toolbar: Filters & Live Search -->
+    <div class="table-toolbar">
+        <div class="toolbar-search">
+            <span class="search-icon">🔍</span>
+            <input 
+                type="text" 
+                id="searchTableInput" 
+                class="search-input" 
+                placeholder="Search by item, SKU, requester, or department..."
+            >
+        </div>
+
+        <div class="filter-pills" id="statusFilterPills">
+            <button class="filter-pill active" data-filter="ALL">All</button>
+            <button class="filter-pill" data-filter="PENDING">Pending</button>
+            <button class="filter-pill" data-filter="APPROVED">Approved</button>
+            <button class="filter-pill" data-filter="HOLD">On Hold</button>
+            <button class="filter-pill" data-filter="REJECTED">Rejected</button>
+        </div>
+
+        <button id="btnRefreshTable" class="btn btn-sm btn-outline">
+            <span class="refresh-icon">🔄</span> Refresh
+        </button>
+    </div>
+
+    <!-- Requisitions Data Table -->
+    <div class="table-container">
+        <table class="data-table" id="requestsTable">
+            <thead>
+                <tr>
+                    <th>Request ID</th>
+                    <th>Item & SKU</th>
+                    <th>Department</th>
+                    <th>Requester</th>
+                    <th>Value (USD)</th>
+                    <th>Status</th>
+                    <th>AI Decision</th>
+                    <th class="text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="requestsTableBody">
+                <!-- Loaded dynamically via JavaScript Fetch API -->
+                <tr>
+                    <td colspan="8" class="empty-cell">
+                        <div class="table-loading-spinner"></div>
+                        <p class="mt-2">Loading procurement requisitions...</p>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- AI RESULTS VIEW MODAL (Explainable AI & Decision Hub)                     -->
+<!-- ========================================================================= -->
+<div id="aiModal" class="modal-backdrop d-none" aria-hidden="true" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <div>
+                    <div class="modal-eyebrow">
+                        <span class="badge badge-info">Explainable AI Review</span>
+                        <span class="font-mono text-muted" id="modalRequestId">PR-XXXX</span>
+                    </div>
+                    <h2 class="modal-title" id="modalItemTitle">Item Requisition Title</h2>
+                    <p class="modal-subtitle" id="modalMetaSubtitle">Department • Requester • Date</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="btnModalClose">&times;</button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body">
+                <!-- AI Decision Highlight Banner -->
+                <div id="aiDecisionBanner" class="ai-decision-banner banner-approve">
+                    <div class="decision-banner-left">
+                        <div class="decision-badge" id="modalDecisionBadge">APPROVE</div>
+                        <div class="decision-meta">
+                            <span class="decision-label">AI Recommendation</span>
+                            <span class="decision-provider" id="modalAiSource">ProcureAI Enterprise Intelligence</span>
+                        </div>
+                    </div>
+                    <div class="decision-banner-right" id="modalSavingsContainer">
+                        <span class="savings-tag">Projected Savings</span>
+                        <span class="savings-val font-mono" id="modalSavingsVal">$0.00</span>
+                    </div>
+                </div>
+
+                <!-- Metrics & Criticality Section -->
+                <div class="ai-stats-row">
+                    <!-- Circular Progress Gauge for Criticality Score -->
+                    <div class="gauge-card">
+                        <div class="gauge-wrapper">
+                            <svg class="gauge-svg" viewBox="0 0 100 100">
+                                <circle class="gauge-bg" cx="50" cy="50" r="42" />
+                                <circle id="gaugeCircle" class="gauge-fill" cx="50" cy="50" r="42" />
+                            </svg>
+                            <div class="gauge-text">
+                                <span class="gauge-number font-mono" id="modalCriticalityScore">0</span>
+                                <span class="gauge-label">Score</span>
+                            </div>
+                        </div>
+                        <div class="gauge-info">
+                            <span class="info-title">Criticality Index</span>
+                            <span class="badge" id="modalPriorityBadge">MEDIUM</span>
+                        </div>
+                    </div>
+
+                    <!-- AI Reasoning Box -->
+                    <div class="reasoning-card">
+                        <div class="reasoning-header">
+                            <span class="reasoning-icon">🤖</span>
+                            <h4>AI Decision Rationale</h4>
+                        </div>
+                        <p class="reasoning-text" id="modalReasoningText">
+                            Analyzing financial limits, multi-warehouse stock allocations, and duplicate risk factors...
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 4 Validation Layers Section -->
+                <div class="validation-layers-section">
+                    <h3 class="layers-title">4-Layer Deterministic Validation Pipeline</h3>
+                    <div class="layers-grid">
+                        <!-- Layer 1: Budget Check -->
+                        <div class="layer-card" id="layerCard1">
+                            <div class="layer-card-header">
+                                <div class="layer-title-group">
+                                    <span class="layer-icon">💰</span>
+                                    <div>
+                                        <div class="layer-name">Layer 1: Budget Check</div>
+                                        <div class="layer-headline" id="l1Headline">-</div>
+                                    </div>
+                                </div>
+                                <span class="badge" id="l1Badge">PENDING</span>
+                            </div>
+                            <p class="layer-msg" id="l1Msg">-</p>
+                            <div class="layer-details font-mono text-xs" id="l1Details"></div>
+                        </div>
+
+                        <!-- Layer 2: Warehouse Stock -->
+                        <div class="layer-card" id="layerCard2">
+                            <div class="layer-card-header">
+                                <div class="layer-title-group">
+                                    <span class="layer-icon">🏢</span>
+                                    <div>
+                                        <div class="layer-name">Layer 2: Multi-Warehouse Stock</div>
+                                        <div class="layer-headline" id="l2Headline">-</div>
+                                    </div>
+                                </div>
+                                <span class="badge" id="l2Badge">PENDING</span>
+                            </div>
+                            <p class="layer-msg" id="l2Msg">-</p>
+                            <div class="layer-details font-mono text-xs" id="l2Details"></div>
+                        </div>
+
+                        <!-- Layer 3: Duplicate PR Detector -->
+                        <div class="layer-card" id="layerCard3">
+                            <div class="layer-card-header">
+                                <div class="layer-title-group">
+                                    <span class="layer-icon">🔍</span>
+                                    <div>
+                                        <div class="layer-name">Layer 3: Duplicate PR Detector</div>
+                                        <div class="layer-headline" id="l3Headline">-</div>
+                                    </div>
+                                </div>
+                                <span class="badge" id="l3Badge">PENDING</span>
+                            </div>
+                            <p class="layer-msg" id="l3Msg">-</p>
+                            <div class="layer-details font-mono text-xs" id="l3Details"></div>
+                        </div>
+
+                        <!-- Layer 4: Historical Usage -->
+                        <div class="layer-card" id="layerCard4">
+                            <div class="layer-card-header">
+                                <div class="layer-title-group">
+                                    <span class="layer-icon">📈</span>
+                                    <div>
+                                        <div class="layer-name">Layer 4: Historical Anomaly</div>
+                                        <div class="layer-headline" id="l4Headline">-</div>
+                                    </div>
+                                </div>
+                                <span class="badge" id="l4Badge">PENDING</span>
+                            </div>
+                            <p class="layer-msg" id="l4Msg">-</p>
+                            <div class="layer-details font-mono text-xs" id="l4Details"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Footer: Manager Action Buttons -->
+            <div class="modal-footer">
+                <div class="modal-status-indicator">
+                    <span>Current Status:</span>
+                    <strong class="font-mono text-primary" id="modalCurrentStatus">-</strong>
+                </div>
+
+                <div class="manager-actions">
+                    <button type="button" class="btn btn-sm btn-outline" id="btnModalFooterClose">Close</button>
+                    <button type="button" class="btn btn-action-hold" id="btnActionHold">
+                        <span>⏸</span> Hold
+                    </button>
+                    <button type="button" class="btn btn-action-investigate" id="btnActionInvestigate">
+                        <span>🔎</span> Investigate
+                    </button>
+                    <button type="button" class="btn btn-action-reject" id="btnActionReject">
+                        <span>⛔</span> Reject
+                    </button>
+                    <button type="button" class="btn btn-action-approve" id="btnActionApprove">
+                        <span>✓</span> Approve
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Notification Toast Container -->
+<div id="toastContainer" class="toast-container"></div>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

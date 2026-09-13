@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Gatekeeper Authentication - ProcureAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/logo.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="auth-body">
+    <!-- Ambient Backdrop Effects -->
+    <div class="auth-ambient-glow auth-glow-1"></div>
+    <div class="auth-ambient-glow auth-glow-2"></div>
+
+    <div class="auth-layout">
+        <!-- ================================================================= -->
+        <!-- LEFT SECTION: Enterprise Branding & 4-Layer Pipeline Showcase    -->
+        <!-- ================================================================= -->
+        <section class="auth-branding-panel">
+            <div class="branding-header">
+                <div class="brand-badge-pill">
+                    <span class="status-dot-pulse"></span>
+                    <span>ProcureAI Enterprise Gatekeeper v2.6</span>
+                </div>
+                <div class="branding-brand">
+                    <img src="{{ url_for('static', filename='images/logo.png') }}" alt="ProcureAI Logo" class="auth-logo-img">
+                    <span class="auth-logo-text">Procure<span class="gradient-text">AI</span></span>
+                </div>
+            </div>
+
+            <div class="branding-hero">
+                <h1 class="branding-title">
+                    AI-Powered Purchase Request <br>
+                    <span class="gradient-text">Checking System</span>
+                </h1>
+                <p class="branding-subtitle">
+                    Clean data. Check budgets. Optimize inventory. Make smarter procurement decisions.
+                </p>
+            </div>
+
+            <!-- Visual 4-Step Pipeline -->
+            <div class="pipeline-showcase">
+                <div class="pipeline-showcase-title">
+                    <span class="pipeline-title-icon">⚡</span>
+                    <span>Continuous AI Risk & Validation Pipeline</span>
+                </div>
+
+                <div class="pipeline-steps-list">
+                    <!-- Step 1: Data Cleaning -->
+                    <div class="pipeline-step-item">
+                        <div class="pipeline-step-indicator">
+                            <span class="step-num">01</span>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="pipeline-step-content">
+                            <div class="step-header">
+                                <span class="step-name">Data Cleaning</span>
+                                <span class="step-tag step-tag-cleaning">Catalog Normalization</span>
+                            </div>
+                            <p class="step-desc">
+                                Deduplicates SKUs, cross-checks vendor master files, and flags anomalous unit pricing before downstream review.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Budget Check -->
+                    <div class="pipeline-step-item">
+                        <div class="pipeline-step-indicator">
+                            <span class="step-num">02</span>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="pipeline-step-content">
+                            <div class="step-header">
+                                <span class="step-name">Budget Check</span>
+                                <span class="step-tag step-tag-budget">Real-Time Ledger</span>
+                            </div>
+                            <p class="step-desc">
+                                Validates requisitions against dynamic departmental fiscal quarters (Q1–Q4) with automated spend commitment.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Inventory Check -->
+                    <div class="pipeline-step-item">
+                        <div class="pipeline-step-indicator">
+                            <span class="step-num">03</span>
+                            <div class="step-connector"></div>
+                        </div>
+                        <div class="pipeline-step-content">
+                            <div class="step-header">
+                                <span class="step-name">Inventory Check</span>
+                                <span class="step-tag step-tag-inventory">Multi-Warehouse</span>
+                            </div>
+                            <p class="step-desc">
+                                Detects idle stock across regional hubs (North, East, West) and recommends automated internal transfers to cut spend.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Usage Analysis -->
+                    <div class="pipeline-step-item">
+                        <div class="pipeline-step-indicator">
+                            <span class="step-num">04</span>
+                        </div>
+                        <div class="pipeline-step-content">
+                            <div class="step-header">
+                                <span class="step-name">Usage Analysis</span>
+                                <span class="step-tag step-tag-ai">LLM Reasoning</span>
+                            </div>
+                            <p class="step-desc">
+                                Synthesizes burn rate projections and generates explainable approval, reduction, or hold recommendations in seconds.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="branding-footer">
+                <div class="trust-badge">
+                    <span class="trust-icon">🔒</span>
+                    <span>SOC-2 Type II Certified • End-to-End Encrypted Session</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================================================================= -->
+        <!-- RIGHT SECTION: Sleek Dark Glassmorphism Auth Panel               -->
+        <!-- ================================================================= -->
+        <section class="auth-form-panel">
+            <div class="auth-card">
+                <!-- Card Header -->
+                <div class="auth-card-header">
+                    <div class="auth-card-icon">🛡️</div>
+                    <h2 class="auth-card-title" id="authFormHeading">Sign In to Gatekeeper</h2>
+                    <p class="auth-card-subtitle" id="authFormSubheading">
+                        Authenticate with your corporate credentials to access the procurement console.
+                    </p>
+                </div>
+
+                <!-- Active Session Switch Notice (if user already has a session) -->
+                {% if session.get('user_id') %}
+                <div class="active-session-banner">
+                    <div class="active-session-avatar">{{ session.get('user_initials', 'US') }}</div>
+                    <div class="active-session-details">
+                        <div class="active-session-status">Active Session Detected</div>
+                        <div class="active-session-name">{{ session.get('user_name') }} <span class="active-session-role">({{ session.get('user_role') }})</span></div>
+                        <div class="active-session-email">{{ session.get('user_email') }}</div>
+                    </div>
+                    <div class="active-session-actions">
+                        <a href="{{ url_for('main.dashboard') }}" class="btn-session-action btn-session-continue">Go to Dashboard &rarr;</a>
+                        <a href="{{ url_for('auth.login_page', switch='1') }}" class="btn-session-action btn-session-switch">Switch Account ↻</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Tabs: Sign In / Create Account -->
+                <div class="auth-tabs" role="tablist">
+                    <button type="button" class="auth-tab-btn active" id="tabSignIn" role="tab" aria-selected="true">
+                        <span>Sign In</span>
+                    </button>
+                    <button type="button" class="auth-tab-btn" id="tabSignUp" role="tab" aria-selected="false">
+                        <span>Create Account</span>
+                    </button>
+                </div>
+
+                <!-- Prominent Continue with Google Button -->
+                <button type="button" class="btn-google" id="btnGoogleSignIn">
+                    <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17Z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.36 7.33 24 12 24Z"/>
+                        <path fill="#FBBC05" d="M5.28 14.27A7.17 7.17 0 0 1 4.9 12c0-.79.14-1.57.38-2.27V6.58H1.26A11.96 11.96 0 0 0 0 12c0 1.92.45 3.74 1.26 5.42l4.02-3.15Z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98Z"/>
+                    </svg>
+                    <span>Continue with Google</span>
+                </button>
+
+                <!-- Subtle Divider -->
+                <div class="auth-divider">
+                    <span class="divider-line"></span>
+                    <span class="divider-text">OR CONTINUE WITH EMAIL</span>
+                    <span class="divider-line"></span>
+                </div>
+
+                <!-- Interactive Alert / Error Banner -->
+                <div id="authAlertBanner" class="auth-alert-banner d-none" role="alert">
+                    <span id="authAlertIcon">⚠️</span>
+                    <span id="authAlertMessage">Alert message goes here</span>
+                </div>
+
+                <!-- Email & Password Form -->
+                <form id="authForm" novalidate>
+                    <!-- Extra Field for Create Account: Full Name -->
+                    <div class="form-group d-none" id="groupFullName">
+                        <label for="inputFullName" class="form-label">Full Name</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">👤</span>
+                            <input 
+                                type="text" 
+                                id="inputFullName" 
+                                class="form-control" 
+                                placeholder="e.g. Sarah Jenkins"
+                                autocomplete="name"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Extra Field for Create Account: Role Selection -->
+                    <div class="form-group d-none" id="groupRole">
+                        <label for="selectRole" class="form-label">Account Role</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">💼</span>
+                            <select id="selectRole" class="form-control">
+                                <option value="Requester" selected>Requester (Submit Requisitions & Track Spend)</option>
+                                <option value="Procurement Director">Procurement Director (Manager Approvals & Budgets)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputEmail" class="form-label">Corporate Email Address</label>
+                        <div class="input-with-icon">
+                            <span class="input-icon">✉️</span>
+                            <input 
+                                type="email" 
+                                id="inputEmail" 
+                                class="form-control" 
+                                placeholder="name@company.com" 
+                                required
+                                autocomplete="email"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="inputPassword" class="form-label">Password</label>
+                            <a href="#" id="linkForgotPassword" class="forgot-link">Forgot password?</a>
+                        </div>
+                        <div class="input-with-icon">
+                            <span class="input-icon">🔑</span>
+                            <input 
+                                type="password" 
+                                id="inputPassword" 
+                                class="form-control" 
+                                placeholder="Enter your secure password" 
+                                required
+                                autocomplete="current-password"
+                            >
+                            <button type="button" class="btn-toggle-pwd" id="btnTogglePassword" aria-label="Toggle password visibility">
+                                👁️
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Remember Session Checkbox -->
+                    <div class="form-options-row">
+                        <label class="checkbox-label" for="checkRemember">
+                            <input type="checkbox" id="checkRemember" checked>
+                            <span class="custom-checkbox"></span>
+                            <span class="checkbox-text">Remember session on this workstation</span>
+                        </label>
+                    </div>
+
+                    <!-- Main Submit Button -->
+                    <button type="submit" class="btn-auth-submit" id="btnSubmitAuth">
+                        <span class="btn-text" id="btnSubmitText">Sign In to Gatekeeper &rarr;</span>
+                        <span class="btn-spinner-xs d-none" id="btnSubmitSpinner"></span>
+                    </button>
+                </form>
+
+                <!-- ============================================================= -->
+                <!-- CRUCIAL FEATURE: ONE-CLICK ROLE SIMULATION                    -->
+                <!-- ============================================================= -->
+                <div class="role-simulation-box">
+                    <div class="role-simulation-header">
+                        <span class="role-simulation-badge">⚡ INSTANT DEMO</span>
+                        <span class="role-simulation-title">ONE-CLICK ROLE SIMULATION</span>
+                    </div>
+                    <p class="role-simulation-subtext">
+                        Bypass manual login to test specific authorization permissions, approval trails, and budgets:
+                    </p>
+
+                    <div class="role-simulation-grid">
+                        <!-- Role 1: Procurement Director -->
+                        <button 
+                            type="button" 
+                            class="btn-role-sim btn-role-director" 
+                            id="btnSimulateDirector"
+                            data-role="Procurement Director"
+                            title="Simulate executive manager with approval, rejection, and inventory dispatch privileges"
+                        >
+                            <div class="role-icon-col">👔</div>
+                            <div class="role-info-col">
+                                <span class="role-name">Procurement Director</span>
+                                <span class="role-privilege">Approvals • Quota Override • Stock Dispatch</span>
+                            </div>
+                            <span class="role-arrow">&rarr;</span>
+                        </button>
+
+                        <!-- Role 2: Requester -->
+                        <button 
+                            type="button" 
+                            class="btn-role-sim btn-role-requester" 
+                            id="btnSimulateRequester"
+                            data-role="Requester"
+                            title="Simulate department employee submitting purchase requisitions"
+                        >
+                            <div class="role-icon-col">👷</div>
+                            <div class="role-info-col">
+                                <span class="role-name">Requester</span>
+                                <span class="role-privilege">Create Requisitions • Track AI Screening</span>
+                            </div>
+                            <span class="role-arrow">&rarr;</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="auth-card-footer">
+                    <p class="auth-legal-text">
+                        Protected by ProcureAI Identity Guard. By continuing, you agree to the 
+                        <a href="#">Security Protocol</a> and <a href="#">Acceptable Use Policy</a>.
+                    </p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notification Hub -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Pass Dynamic Firebase & Environment Data to Frontend Script -->
+    <script>
+        window.PROCUREAI_CONFIG = {
+            projectId: "{{ firebase_project_id }}",
+            apiKey: "{{ firebase_client_api_key }}",
+            appId: "{{ firebase_app_id }}",
+            firebaseConnected: {{ 'true' if firebase_connected else 'false' }},
+            nextUrl: "{{ request.args.get('next', '/dashboard') }}"
+        };
+    </script>
+
+    <!-- Firebase Client SDK (Compat v10 for rock-solid zero-build browser runtime) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+    <!-- Authentication JavaScript Handler with Cache Buster -->
+    <script src="{{ url_for('static', filename='js/auth.js') }}?v={{ cache_buster or '2.8.0' }}"></script>
+</body>
+</html>

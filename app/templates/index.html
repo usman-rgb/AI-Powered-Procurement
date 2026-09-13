@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Executive Overview Notice -->
+<div class="overview-welcome-bar">
+    <div>
+        <h2>Regional Warehouses & Departmental Budgets</h2>
+        <p class="text-secondary">Comprehensive view of inventory distribution, safety thresholds, and quarterly fiscal headroom.</p>
+    </div>
+    <div class="overview-quick-links">
+        <a href="/submit-request" class="btn btn-primary btn-sm">+ New Requisition</a>
+        <a href="/" class="btn btn-outline btn-sm">AI Decision Hub &rarr;</a>
+    </div>
+</div>
+
+<!-- Key Metrics Section -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Purchase Requests</span>
+            <span class="stat-badge">Total</span>
+        </div>
+        <div class="stat-value">{{ stats.total_requests }}</div>
+        <div class="stat-subtext"><span class="highlight-amber">{{ stats.pending_approval }}</span> awaiting management review</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Stock Alert Items</span>
+            <span class="stat-badge {{ 'stat-badge-danger' if stats.low_stock_count > 0 else '' }}">Reorder</span>
+        </div>
+        <div class="stat-value {{ 'text-danger' if stats.low_stock_count > 0 else '' }}">{{ stats.low_stock_count }}</div>
+        <div class="stat-subtext">Items at or below safety threshold</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Total Allocated Budget</span>
+            <span class="stat-badge">FY2026</span>
+        </div>
+        <div class="stat-value">${{ "{:,.0f}".format(stats.total_budget) }}</div>
+        <div class="stat-subtext">${{ "{:,.0f}".format(stats.spent_budget) }} actually spent to date</div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <span class="stat-title">Remaining Available</span>
+            <span class="stat-badge stat-badge-success">Safe</span>
+        </div>
+        <div class="stat-value text-success">${{ "{:,.0f}".format(stats.remaining_budget) }}</div>
+        <div class="stat-subtext">${{ "{:,.0f}".format(stats.committed_budget) }} committed in active POs</div>
+    </div>
+</div>
+
+<!-- Budgets Progress Overview -->
+<section id="budgets" class="content-section">
+    <div class="section-header">
+        <div>
+            <h2>Departmental Budgets (Q3 FY2026)</h2>
+            <p class="section-desc">Budget allocations, committed orders, and remaining headroom by department</p>
+        </div>
+    </div>
+
+    <div class="budget-grid">
+        {% for b in budgets %}
+        <div class="budget-card">
+            <div class="budget-card-header">
+                <div>
+                    <h3 class="budget-dept">{{ b.department }}</h3>
+                    <span class="budget-code">{{ b.budget_id }}</span>
+                </div>
+                <span class="badge {{ 'badge-success' if b.status == 'active' else 'badge-danger' }}">{{ b.status }}</span>
+            </div>
+
+            <div class="budget-figures">
+                <div class="figure-item">
+                    <span class="fig-label">Allocated</span>
+                    <span class="fig-val">${{ "{:,.0f}".format(b.allocated_amount or 0) }}</span>
+                </div>
+                <div class="figure-item">
+                    <span class="fig-label">Committed</span>
+                    <span class="fig-val text-amber">${{ "{:,.0f}".format(b.committed_amount or 0) }}</span>
+                </div>
+                <div class="figure-item">
+                    <span class="fig-label">Spent</span>
+                    <span class="fig-val text-primary">${{ "{:,.0f}".format(b.spent_amount or 0) }}</span>
+                </div>
+                <div class="figure-item">
+                    <span class="fig-label">Remaining</span>
+                    <span class="fig-val text-success">${{ "{:,.0f}".format(b.remaining_amount or 0) }}</span>
+                </div>
+            </div>
+
+            {% set total = b.allocated_amount or 1 %}
+            {% set pct_spent = ((b.spent_amount or 0) / total * 100)|round|int %}
+            {% set pct_committed = ((b.committed_amount or 0) / total * 100)|round|int %}
+            <div class="progress-bar-container">
+                <div class="progress-bar-stacked">
+                    <div class="progress-fill progress-spent" style="width: {{ pct_spent }}%;" title="Spent: {{ pct_spent }}%"></div>
+                    <div class="progress-fill progress-committed" style="width: {{ pct_committed }}%;" title="Committed: {{ pct_committed }}%"></div>
+                </div>
+                <div class="progress-legend">
+                    <span>{{ pct_spent + pct_committed }}% Utilized</span>
+                    <span>{{ 100 - (pct_spent + pct_committed) }}% Available</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <p>No departmental budgets recorded yet.</p>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Purchase Requests Section -->
+<section id="requests" class="content-section">
+    <div class="section-header">
+        <div>
+            <h2>Purchase Requests & AI Risk Screening</h2>
+            <p class="section-desc">Automated price variance validation, vendor anomaly alerts, and approval states</p>
+        </div>
+        <div>
+            <span class="badge badge-outline">Auto AI Scoring Active</span>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Request ID</th>
+                    <th>Title & Items</th>
+                    <th>Requester</th>
+                    <th>Department</th>
+                    <th>Amount</th>
+                    <th>AI Risk Score</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent_requests %}
+                <tr>
+                    <td class="font-mono text-muted"><strong>{{ r.request_id }}</strong></td>
+                    <td>
+                        <div class="table-title">{{ r.title }}</div>
+                        <div class="table-subtitle">
+                            {% for it in r.get('items', []) %}
+                                {{ it.quantity }}x {{ it.item_name }} ({{ it.sku }}){% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>{{ r.requester_name or r.requester_id }}</td>
+                    <td><span class="badge badge-light">{{ r.department }}</span></td>
+                    <td class="font-bold">${{ "{:,.2f}".format(r.total_amount or 0) }}</td>
+                    <td>
+                        {% set score = r.ai_risk_score or 0.0 %}
+                        {% if score < 0.2 %}
+                            <span class="risk-pill risk-low" title="{{ r.ai_notes }}">✓ Low ({{ "%.2f"|format(score) }})</span>
+                        {% elif score < 0.6 %}
+                            <span class="risk-pill risk-med" title="{{ r.ai_notes }}">⚠️ Mod ({{ "%.2f"|format(score) }})</span>
+                        {% else %}
+                            <span class="risk-pill risk-high" title="{{ r.ai_notes }}">⛔ High Risk ({{ "%.2f"|format(score) }})</span>
+                        {% endif %}
+                        <div class="ai-note-hint">{{ r.ai_notes }}</div>
+                    </td>
+                    <td>
+                        {% if r.status == 'approved' %}
+                            <span class="badge badge-success">Approved</span>
+                        {% elif r.status == 'submitted' %}
+                            <span class="badge badge-warning">Pending</span>
+                        {% elif r.status == 'fulfilled' %}
+                            <span class="badge badge-info">Fulfilled</span>
+                        {% elif r.status == 'rejected' %}
+                            <span class="badge badge-danger">Rejected</span>
+                        {% else %}
+                            <span class="badge badge-secondary">{{ r.status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="empty-cell">No purchase requests logged yet. Click "Submit Request" to create your first requisition.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<!-- Multi-Warehouse Inventory Section -->
+<section id="inventory" class="content-section">
+    <div class="section-header">
+        <div>
+            <h2>Multi-Warehouse Inventory Stock</h2>
+            <p class="section-desc">Real-time stock aggregated across regional fulfillment hubs</p>
+        </div>
+    </div>
+
+    <div class="inventory-grid">
+        {% for item in low_stock_items %}
+        <div class="inventory-card warning-card">
+            <div class="inventory-card-header">
+                <div>
+                    <span class="badge badge-danger">Reorder Required</span>
+                    <h3 class="item-title">{{ item.name }}</h3>
+                    <span class="font-mono text-muted">{{ item.sku }}</span>
+                </div>
+                <div class="stock-total-badge">
+                    <span class="stock-num text-danger">{{ item.total_stock }}</span>
+                    <span class="stock-lbl">Total Stock</span>
+                </div>
+            </div>
+
+            <div class="reorder-meta">
+                <span>Threshold: <strong>{{ item.reorder_threshold }}</strong> units</span>
+                <span>Unit Cost: <strong>${{ "{:,.2f}".format(item.unit_cost or 0) }}</strong></span>
+            </div>
+
+            <div class="warehouse-breakdown">
+                <div class="breakdown-title">Regional Hub Stock Distribution:</div>
+                <div class="wh-chips">
+                    {% for code, wh in item.warehouses.items() %}
+                    <div class="wh-chip">
+                        <span class="wh-name">{{ wh.location_name }} ({{ code }})</span>
+                        <span class="wh-count font-mono">{{ wh.stock }} units</span>
+                        <span class="wh-bin">Bin: {{ wh.bin_shelf }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- Regional Logistics Hubs -->
+<section class="content-section">
+    <div class="section-header">
+        <div>
+            <h2>Regional Fulfillment & Logistics Network</h2>
+            <p class="section-desc">Active distribution hubs facilitating multi-warehouse inventory reallocation</p>
+        </div>
+    </div>
+    <div class="hubs-grid">
+        <div class="hub-card">
+            <div class="hub-header">
+                <span class="hub-badge badge-success">Operational</span>
+                <span class="font-mono text-muted">WH-NORTH</span>
+            </div>
+            <h3 class="hub-name">Chicago Hub</h3>
+            <p class="hub-meta">Midwest fulfillment center &bull; Automated Bin Shelf A-12</p>
+            <div class="hub-footer">
+                <span class="text-xs text-secondary">Cross-docking enabled</span>
+            </div>
+        </div>
+
+        <div class="hub-card">
+            <div class="hub-header">
+                <span class="hub-badge badge-success">Operational</span>
+                <span class="font-mono text-muted">WH-WEST</span>
+            </div>
+            <h3 class="hub-name">Seattle Hub</h3>
+            <p class="hub-meta">Pacific coast fulfillment &bull; Automated Bin Shelf W-04</p>
+            <div class="hub-footer">
+                <span class="text-xs text-secondary">Same-day regional dispatch</span>
+            </div>
+        </div>
+
+        <div class="hub-card">
+            <div class="hub-header">
+                <span class="hub-badge badge-success">Operational</span>
+                <span class="font-mono text-muted">WH-EAST</span>
+            </div>
+            <h3 class="hub-name">New York Hub</h3>
+            <p class="hub-meta">East Coast regional hub &bull; Automated Bin Shelf E-08</p>
+            <div class="hub-footer">
+                <span class="text-xs text-secondary">High-density pallet storage</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

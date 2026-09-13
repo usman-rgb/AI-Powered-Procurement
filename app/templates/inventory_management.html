@@ -1,0 +1,749 @@
+{% extends "base.html" %}
+
+{% block title %}Inventory Management | ProcureAI Enterprise{% endblock %}
+
+{% block page_header %}Manual Inventory Management & Warehouse Stock{% endblock %}
+
+{% block content %}
+<div class="inventory-mgmt-container" id="inventoryMgmtContainer" data-initial-tab="{{ initial_tab or request.args.get('tab', 'catalog') }}">
+    <!-- Top Alert & Feedback Banner -->
+    <div id="inventoryAlertBanner" class="inventory-alert-banner" style="display: none;">
+        <span class="alert-icon" id="inventoryAlertIcon">ℹ️</span>
+        <span class="alert-text" id="inventoryAlertText"></span>
+        <button class="alert-close-btn" onclick="document.getElementById('inventoryAlertBanner').style.display='none'">✕</button>
+    </div>
+
+    <!-- Inventory KPIs Header Grid -->
+    <section class="inventory-kpi-grid">
+        <div class="kpi-card glass-panel" id="kpiTotalItemsCard">
+            <div class="kpi-icon-wrap bg-primary-light">
+                <span class="kpi-icon">📦</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Catalog Items (SKUs)</span>
+                <h3 class="kpi-value" id="kpiTotalItems">--</h3>
+                <span class="kpi-subtext">Active catalog products</span>
+            </div>
+        </div>
+
+        <div class="kpi-card glass-panel" id="kpiInStockCard">
+            <div class="kpi-icon-wrap bg-success-light">
+                <span class="kpi-icon">🟢</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Healthy In Stock</span>
+                <h3 class="kpi-value text-success" id="kpiInStock">--</h3>
+                <span class="kpi-subtext">Above reorder threshold</span>
+            </div>
+        </div>
+
+        <div class="kpi-card glass-panel" id="kpiLowStockCard">
+            <div class="kpi-icon-wrap bg-warning-light">
+                <span class="kpi-icon">🟡</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Low Stock Alerts</span>
+                <h3 class="kpi-value text-warning" id="kpiLowStock">--</h3>
+                <span class="kpi-subtext">At or below reorder level</span>
+            </div>
+        </div>
+
+        <div class="kpi-card glass-panel" id="kpiOutOfStockCard">
+            <div class="kpi-icon-wrap bg-danger-light">
+                <span class="kpi-icon">🔴</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Out of Stock</span>
+                <h3 class="kpi-value text-danger" id="kpiOutOfStock">--</h3>
+                <span class="kpi-subtext">Zero units available</span>
+            </div>
+        </div>
+
+        <div class="kpi-card glass-panel" id="kpiTotalUnitsCard">
+            <div class="kpi-icon-wrap bg-info-light">
+                <span class="kpi-icon">🏢</span>
+            </div>
+            <div class="kpi-content">
+                <span class="kpi-label">Aggregate Units</span>
+                <h3 class="kpi-value text-info" id="kpiTotalUnits">--</h3>
+                <span class="kpi-subtext">Across all warehouse hubs</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Inventory Module Navigation Tabs -->
+    <div class="inventory-nav-tabs glass-panel">
+        <button type="button" class="inv-tab-btn active" id="tabCatalogBtn" onclick="if(window.switchInventoryTab) window.switchInventoryTab('catalog');">
+            <span class="tab-icon">📦</span>
+            <span class="tab-title">Catalog & Warehouse Stock</span>
+        </button>
+        <button type="button" class="inv-tab-btn" id="tabAnalyticsBtn" onclick="if(window.switchInventoryTab) window.switchInventoryTab('analytics');">
+            <span class="tab-icon">📊</span>
+            <span class="tab-title">Inventory Analytics & Asset Valuation</span>
+            <span class="tab-badge" id="tabAnalyticsBadge">Real-time</span>
+        </button>
+        <button type="button" class="inv-tab-btn" id="tabHistoryBtn" onclick="if(window.switchInventoryTab) window.switchInventoryTab('history');">
+            <span class="tab-icon">📜</span>
+            <span class="tab-title">Stock Movement Audit Trail</span>
+            <span class="tab-badge" id="tabHistoryBadge">Live Logs</span>
+        </button>
+    </div>
+
+    <!-- Tab 1: Catalog View -->
+    <div id="inventoryCatalogView" class="inventory-tab-view active">
+    <!-- Toolbar & Filter Controls -->
+    <div class="inventory-controls-bar glass-panel">
+        <div class="controls-left">
+            <div class="search-input-wrap">
+                <span class="search-icon">🔍</span>
+                <input 
+                    type="text" 
+                    id="inventorySearchInput" 
+                    class="inventory-search-input" 
+                    placeholder="Search by SKU, product name, or category..."
+                    autocomplete="off"
+                >
+                <button class="clear-search-btn" id="clearSearchBtn" title="Clear search" style="display: none;">✕</button>
+            </div>
+
+            <div class="filter-group">
+                <label for="categoryFilter" class="filter-label">Category:</label>
+                <select id="categoryFilter" class="form-select select-sm">
+                    <option value="">All Categories</option>
+                    <option value="Hardware">Hardware</option>
+                    <option value="Office Supplies">Office Supplies</option>
+                    <option value="Networking">Networking</option>
+                    <option value="Raw Materials">Raw Materials</option>
+                    <option value="Software">Software</option>
+                    <option value="Services">Services</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="statusFilter" class="filter-label">Stock Status:</label>
+                <select id="statusFilter" class="form-select select-sm">
+                    <option value="">All Statuses</option>
+                    <option value="in_stock">In Stock (Healthy)</option>
+                    <option value="low_stock">Low Stock Warning</option>
+                    <option value="out_of_stock">Out of Stock</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="controls-right">
+            <button class="btn btn-outline" id="refreshInventoryBtn" title="Refresh stock from Firestore">
+                <span class="btn-icon">↻</span> Refresh
+            </button>
+            <button class="btn btn-primary" id="openAddItemBtn" onclick="if(window.openAddModal) window.openAddModal();">
+                <span class="btn-icon">➕</span> Add New Item
+            </button>
+        </div>
+    </div>
+
+    <!-- Inventory Data Table -->
+    <div class="inventory-table-container glass-panel">
+        <div class="table-header-row">
+            <div class="table-header-title">
+                <h2>Warehouse Inventory Catalog</h2>
+                <span class="table-count-badge" id="tableFilteredCount">Loading catalog...</span>
+            </div>
+            <div class="table-legend">
+                <span class="legend-item"><span class="legend-dot dot-green"></span> In Stock</span>
+                <span class="legend-item"><span class="legend-dot dot-yellow"></span> Low Stock (&le; Reorder Level)</span>
+                <span class="legend-item"><span class="legend-dot dot-red"></span> Out of Stock (0)</span>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="inventory-table" id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th style="width: 22%;">Product / Item Name</th>
+                        <th style="width: 13%;">SKU Code</th>
+                        <th style="width: 12%;">Category</th>
+                        <th style="width: 23%;">Warehouse Breakdown</th>
+                        <th style="width: 8%; text-align: center;">Total Stock</th>
+                        <th style="width: 8%; text-align: center;">Status</th>
+                        <th style="width: 14%; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <!-- Dynamic Rows Rendered by inventory.js -->
+                    <tr class="loading-placeholder-row">
+                        <td colspan="7" class="text-center py-5">
+                            <div class="spinner-container">
+                                <div class="loading-spinner"></div>
+                                <p class="mt-2 text-muted">Retrieving inventory from Google Cloud Firestore...</p>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Empty Results State -->
+        <div id="inventoryEmptyState" class="inventory-empty-state" style="display: none;">
+            <div class="empty-icon">📦</div>
+            <h3>No Inventory Items Found</h3>
+            <p id="emptyStateMessage">No items match your active filters or search query.</p>
+            <button class="btn btn-outline btn-sm" id="resetFiltersBtn">Reset All Filters</button>
+        </div>
+    </div>
+    </div><!-- End Tab 1: Catalog View -->
+
+    <!-- ========================================================================= -->
+    <!-- Tab 2: Inventory Analytics & Asset Valuation View                         -->
+    <!-- ========================================================================= -->
+    <div id="inventoryAnalyticsView" class="inventory-tab-view" style="display: none;">
+        <!-- Analytics Top Metrics Grid -->
+        <div class="analytics-header-metrics">
+            <div class="analytics-card glass-panel">
+                <div class="metric-top">
+                    <span class="metric-label">Total Asset Valuation</span>
+                    <span class="metric-icon-bubble bg-success-light">💰</span>
+                </div>
+                <h2 class="metric-value-lg text-success" id="anTotalValuation">Loading...</h2>
+                <span class="metric-subtext">Sum of (Stock &times; Unit Cost) across all regional hubs</span>
+            </div>
+
+            <div class="analytics-card glass-panel">
+                <div class="metric-top">
+                    <span class="metric-label">Aggregate Units Stocked</span>
+                    <span class="metric-icon-bubble bg-primary-light">🏢</span>
+                </div>
+                <h2 class="metric-value-lg text-primary" id="anTotalUnits">--</h2>
+                <span class="metric-subtext">Total physical goods available in active storage</span>
+            </div>
+
+            <div class="analytics-card glass-panel">
+                <div class="metric-top">
+                    <span class="metric-label">Average Unit Cost</span>
+                    <span class="metric-icon-bubble bg-info-light">🏷️</span>
+                </div>
+                <h2 class="metric-value-lg text-info" id="anAvgUnitCost">--</h2>
+                <span class="metric-subtext">Weighted mean procurement cost per unit</span>
+            </div>
+
+            <div class="analytics-card glass-panel">
+                <div class="metric-top">
+                    <span class="metric-label">Catalog Health Ratio</span>
+                    <span class="metric-icon-bubble bg-warning-light">🩺</span>
+                </div>
+                <h2 class="metric-value-lg text-warning" id="anHealthRatio">--%</h2>
+                <span class="metric-subtext" id="anHealthSubtext">Calculating safety health margins...</span>
+            </div>
+        </div>
+
+        <!-- Live Real-Time Interactive Charts Grid -->
+        <div class="analytics-charts-grid">
+            <!-- Chart 1: Regional Hubs Capital & Units Breakdown -->
+            <div class="analytics-panel glass-panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>📊 Regional Hubs: Valuation ($) & Unit Capacity</h3>
+                        <p class="panel-sub">Real-time asset value and physical stock distribution</p>
+                    </div>
+                    <span class="live-pulse-badge">Live Chart</span>
+                </div>
+                <div class="chart-canvas-container" style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="chartWarehouseHubs"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Category Capital Distribution -->
+            <div class="analytics-panel glass-panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>🍩 Capital Investment by Category</h3>
+                        <p class="panel-sub">Asset allocation across item categories</p>
+                    </div>
+                    <span class="live-pulse-badge">Category Share</span>
+                </div>
+                <div class="chart-canvas-container" style="position: relative; height: 280px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="chartCategoryShare"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-charts-grid mt-3">
+            <!-- Chart 3: Top Valued Assets Comparison -->
+            <div class="analytics-panel glass-panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>💎 Top 5 High-Value Assets ($)</h3>
+                        <p class="panel-sub">Capital impact of highest valued SKUs in active storage</p>
+                    </div>
+                    <span class="live-pulse-badge">Asset Value</span>
+                </div>
+                <div class="chart-canvas-container" style="position: relative; height: 260px; width: 100%;">
+                    <canvas id="chartTopAssets"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 4: Catalog Stock Health Ratio -->
+            <div class="analytics-panel glass-panel chart-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>🩺 Catalog Health & Stock Availability Ratio</h3>
+                        <p class="panel-sub">Healthy stock vs Low stock alert vs Depleted</p>
+                    </div>
+                    <span class="live-pulse-badge">Health Index</span>
+                </div>
+                <div class="chart-canvas-container" style="position: relative; height: 260px; width: 100%; display: flex; justify-content: center; align-items: center;">
+                    <canvas id="chartStockHealth"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Split Grid: Regional Hubs & Category Asset Breakdown -->
+        <div class="analytics-split-grid mt-4">
+            <!-- Regional Hub Capacity Breakdown -->
+            <div class="analytics-panel glass-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>Regional Hub Stock & Asset Distribution</h3>
+                        <p class="panel-sub">Capacity utilization and capital allocation across locations</p>
+                    </div>
+                    <span class="live-pulse-badge">Live Multi-Hub</span>
+                </div>
+                <div class="warehouse-distribution-list" id="anWarehouseList">
+                    <p class="text-muted text-center py-4">Loading regional hub distribution...</p>
+                </div>
+            </div>
+
+            <!-- Category Valuation Breakdown -->
+            <div class="analytics-panel glass-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>Capital Investment by Category</h3>
+                        <p class="panel-sub">Asset allocation across item categories</p>
+                    </div>
+                    <span class="live-pulse-badge">Categorized</span>
+                </div>
+                <div class="category-breakdown-list" id="anCategoryList">
+                    <p class="text-muted text-center py-4">Calculating category breakdown...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Split Grid: Top High-Value Assets & Critical Reorders -->
+        <div class="analytics-split-grid mt-4">
+            <!-- Top Valued Assets -->
+            <div class="analytics-panel glass-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>Top High-Value Inventory Assets</h3>
+                        <p class="panel-sub">Highest capital impact products in current storage</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="inventory-table-sub">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>SKU</th>
+                                <th>Units</th>
+                                <th>Unit Cost</th>
+                                <th style="text-align: right;">Total Asset Value</th>
+                            </tr>
+                        </thead>
+                        <tbody id="anTopAssetsBody">
+                            <tr><td colspan="5" class="text-center text-muted py-3">Loading top assets...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Critical Reorder Radar -->
+            <div class="analytics-panel glass-panel">
+                <div class="panel-header">
+                    <div>
+                        <h3>Critical Reorder Radar</h3>
+                        <p class="panel-sub">Items at or below safety reorder threshold</p>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="inventory-table-sub">
+                        <thead>
+                            <tr>
+                                <th>Product Name</th>
+                                <th>SKU</th>
+                                <th>Stock / Min</th>
+                                <th>Deficit</th>
+                                <th style="text-align: right;">Restock Est. ($)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="anCriticalReorderBody">
+                            <tr><td colspan="5" class="text-center text-muted py-3">Scanning reorder thresholds...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div><!-- End Tab 2: Analytics View -->
+
+    <!-- ========================================================================= -->
+    <!-- Tab 3: Stock Movement Audit Trail View                                    -->
+    <!-- ========================================================================= -->
+    <div id="inventoryHistoryView" class="inventory-tab-view" style="display: none;">
+        <!-- History Controls Bar -->
+        <div class="inventory-controls-bar glass-panel">
+            <div class="controls-left">
+                <div class="search-input-wrap">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                        type="text" 
+                        id="historySearchInput" 
+                        class="inventory-search-input" 
+                        placeholder="Search logs by SKU, item name, or initiator..."
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="filter-group">
+                    <label for="historyTypeFilter" class="filter-label">Activity Type:</label>
+                    <select id="historyTypeFilter" class="form-select select-sm">
+                        <option value="">All Movement Types</option>
+                        <option value="auto_allocation">AI Auto-Allocation</option>
+                        <option value="manual_adjustment">Manual Adjustment</option>
+                        <option value="creation">New SKU Registration</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="controls-right">
+                <button class="btn btn-outline" id="refreshHistoryBtn" onclick="if(window.fetchHistory) window.fetchHistory();" title="Refresh audit logs from Firestore">
+                    <span class="btn-icon">↻</span> Refresh Audit Trail
+                </button>
+            </div>
+        </div>
+
+        <!-- History Data Table -->
+        <div class="inventory-table-container glass-panel">
+            <div class="table-header-row">
+                <div class="table-header-title">
+                    <h2>Stock Movement & Audit Log</h2>
+                    <span class="table-count-badge" id="historyTableCount">Loading logs...</span>
+                </div>
+                <span class="audit-trail-tag">Tamper-Evident Firestore Records</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="inventory-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 14%;">Timestamp (UTC)</th>
+                            <th style="width: 22%;">Product & SKU</th>
+                            <th style="width: 15%;">Activity Type</th>
+                            <th style="width: 12%;">Warehouse Hub</th>
+                            <th style="width: 9%; text-align: center;">Delta (Units)</th>
+                            <th style="width: 9%; text-align: center;">New Stock</th>
+                            <th style="width: 19%;">Initiator & Justification</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr class="loading-placeholder-row">
+                            <td colspan="7" class="text-center py-5">
+                                <div class="spinner-container">
+                                    <div class="loading-spinner"></div>
+                                    <p class="mt-2 text-muted">Retrieving stock movement records from Firestore...</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div><!-- End Tab 3: History View -->
+</div><!-- End inventory-mgmt-container -->
+
+<!-- ========================================================================= -->
+<!-- Modal 1: Add New Inventory Item Modal                                     -->
+<!-- ========================================================================= -->
+<div class="custom-modal-backdrop" id="addItemModal" style="display: none;">
+    <div class="custom-modal-dialog glass-panel">
+        <div class="custom-modal-header">
+            <div class="modal-title-wrap">
+                <span class="modal-title-icon">➕</span>
+                <div>
+                    <h3>Register New Inventory Item</h3>
+                    <p class="modal-subtitle">Add a new SKU to the catalog and initialize regional warehouse allocations.</p>
+                </div>
+            </div>
+            <button class="modal-close-btn" id="closeAddModalBtn" title="Close">✕</button>
+        </div>
+
+        <form id="addItemForm">
+            <div class="custom-modal-body">
+                <div class="form-row-2col">
+                    <div class="form-group">
+                        <label for="addSku" class="form-label required">SKU Code</label>
+                        <input 
+                            type="text" 
+                            id="addSku" 
+                            name="sku" 
+                            class="form-control font-mono" 
+                            placeholder="e.g. SKU-LAPTOP-M3" 
+                            required 
+                            maxlength="40"
+                            autocomplete="off"
+                        >
+                        <span class="form-hint">Unique alphanumeric product code</span>
+                    </div>
+                    <div class="form-group">
+                        <label for="addName" class="form-label required">Item / Product Name</label>
+                        <input 
+                            type="text" 
+                            id="addName" 
+                            name="name" 
+                            class="form-control" 
+                            placeholder="e.g. Developer Laptop 16-inch M3" 
+                            required
+                            autocomplete="off"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-row-3col">
+                    <div class="form-group">
+                        <label for="addCategory" class="form-label required">Category</label>
+                        <select id="addCategory" name="category" class="form-select" required>
+                            <option value="Hardware" selected>Hardware</option>
+                            <option value="Office Supplies">Office Supplies</option>
+                            <option value="Networking">Networking</option>
+                            <option value="Raw Materials">Raw Materials</option>
+                            <option value="Software">Software</option>
+                            <option value="Services">Services</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="addUnitCost" class="form-label">Est. Unit Cost ($)</label>
+                        <input 
+                            type="number" 
+                            id="addUnitCost" 
+                            name="unit_cost" 
+                            class="form-control" 
+                            placeholder="0.00" 
+                            step="0.01" 
+                            min="0"
+                            value="0.00"
+                        >
+                    </div>
+                    <div class="form-group">
+                        <label for="addReorderThreshold" class="form-label">Reorder Level</label>
+                        <input 
+                            type="number" 
+                            id="addReorderThreshold" 
+                            name="reorder_threshold" 
+                            class="form-control" 
+                            placeholder="10" 
+                            min="0" 
+                            value="10"
+                        >
+                        <span class="form-hint">Triggers Low Stock warning</span>
+                    </div>
+                </div>
+
+                <!-- Warehouse Quantities Section -->
+                <div class="modal-section-divider">
+                    <span>Initial Regional Warehouse Allocations</span>
+                </div>
+
+                <div class="warehouse-allocation-grid">
+                    <div class="wh-stock-card">
+                        <div class="wh-card-head">
+                            <span class="wh-badge badge-north">WH-NORTH</span>
+                            <span class="wh-location">Chicago Hub</span>
+                        </div>
+                        <div class="wh-input-row">
+                            <label for="addWhNorthStock">Initial Stock:</label>
+                            <input type="number" id="addWhNorthStock" class="wh-qty-input add-wh-calc" value="0" min="0">
+                        </div>
+                    </div>
+
+                    <div class="wh-stock-card">
+                        <div class="wh-card-head">
+                            <span class="wh-badge badge-west">WH-WEST</span>
+                            <span class="wh-location">Seattle Hub</span>
+                        </div>
+                        <div class="wh-input-row">
+                            <label for="addWhWestStock">Initial Stock:</label>
+                            <input type="number" id="addWhWestStock" class="wh-qty-input add-wh-calc" value="0" min="0">
+                        </div>
+                    </div>
+
+                    <div class="wh-stock-card">
+                        <div class="wh-card-head">
+                            <span class="wh-badge badge-east">WH-EAST</span>
+                            <span class="wh-location">New York Hub</span>
+                        </div>
+                        <div class="wh-input-row">
+                            <label for="addWhEastStock">Initial Stock:</label>
+                            <input type="number" id="addWhEastStock" class="wh-qty-input add-wh-calc" value="0" min="0">
+                        </div>
+                    </div>
+
+                    <div class="wh-stock-card">
+                        <div class="wh-card-head">
+                            <span class="wh-badge badge-south">WH-SOUTH</span>
+                            <span class="wh-location">Austin Hub</span>
+                        </div>
+                        <div class="wh-input-row">
+                            <label for="addWhSouthStock">Initial Stock:</label>
+                            <input type="number" id="addWhSouthStock" class="wh-qty-input add-wh-calc" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="aggregate-preview-bar">
+                    <span>Initial Aggregate Total Stock:</span>
+                    <strong class="aggregate-number" id="addTotalStockPreview">0 Units</strong>
+                </div>
+            </div>
+
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-outline" id="cancelAddBtn">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="submitAddItemBtn">
+                    <span class="btn-spinner" style="display: none;"></span>
+                    <span class="btn-text">Create Inventory Item</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- Modal 2: Edit Stock Modal                                                 -->
+<!-- ========================================================================= -->
+<div class="custom-modal-backdrop" id="editStockModal" style="display: none;">
+    <div class="custom-modal-dialog glass-panel">
+        <div class="custom-modal-header">
+            <div class="modal-title-wrap">
+                <span class="modal-title-icon">✏️</span>
+                <div>
+                    <h3>Manual Stock Adjustment</h3>
+                    <p class="modal-subtitle">Adjust quantities across regional warehouses with instant Firestore synchronization.</p>
+                </div>
+            </div>
+            <button class="modal-close-btn" id="closeEditModalBtn" title="Close">✕</button>
+        </div>
+
+        <form id="editStockForm" onsubmit="return false;">
+            <div class="custom-modal-body">
+                <!-- Item Summary Banner -->
+                <div class="edit-item-summary-card">
+                    <div class="summary-left">
+                        <div class="summary-sku-badge" id="editModalSkuBadge">SKU-XXXXX</div>
+                        <h4 class="summary-item-name" id="editModalItemName">Product Name</h4>
+                        <span class="summary-item-meta" id="editModalItemMeta">Category | Unit Cost: $0.00</span>
+                    </div>
+                    <div class="summary-right">
+                        <span class="summary-stock-label">Current Total Stock</span>
+                        <div class="summary-stock-value" id="editModalCurrentStock">--</div>
+                    </div>
+                </div>
+
+                <div class="modal-section-divider">
+                    <span>Regional Warehouse Quantities</span>
+                </div>
+
+                <!-- Dynamic Warehouses List for Selected Item -->
+                <div class="edit-warehouses-list" id="editWarehousesContainer">
+                    <!-- Populated dynamically via inventory.js -->
+                </div>
+
+                <!-- Optional: Add New Warehouse Location to this SKU -->
+                <div class="add-wh-location-expander">
+                    <button type="button" class="btn-link-expand" id="toggleAddWarehouseRowBtn">
+                        <span>➕ Add another warehouse location...</span>
+                    </button>
+                    <div id="newWarehouseRow" class="new-wh-row" style="display: none;">
+                        <input type="text" id="newWhCode" class="form-control input-sm font-mono" placeholder="WH-CODE (e.g. WH-CENTRAL)">
+                        <input type="text" id="newWhLocation" class="form-control input-sm" placeholder="Location Name (e.g. Denver Hub)">
+                        <input type="number" id="newWhStock" class="form-control input-sm" placeholder="Stock" min="0" value="0">
+                        <button type="button" class="btn btn-sm btn-outline" id="confirmAddNewWhBtn">Add Location</button>
+                    </div>
+                </div>
+
+                <!-- Metadata Tweaks -->
+                <div class="edit-meta-grid">
+                    <div class="form-group">
+                        <label for="editReorderThreshold" class="form-label">Reorder Level Alert</label>
+                        <input type="number" id="editReorderThreshold" class="form-control input-sm" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="editUnitCost" class="form-label">Unit Cost ($)</label>
+                        <input type="number" id="editUnitCost" class="form-control input-sm" step="0.01" min="0">
+                    </div>
+                </div>
+
+                <!-- Aggregate New Total Live Preview -->
+                <div class="aggregate-preview-bar">
+                    <span>New Total Stock (Post-Save):</span>
+                    <strong class="aggregate-number text-success" id="editTotalStockPreview">-- Units</strong>
+                </div>
+            </div>
+
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
+                <button type="submit" class="btn btn-success" id="saveStockEditBtn">
+                    <span class="btn-spinner" style="display: none;"></span>
+                    <span class="btn-text">Update Stock Levels</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- Modal 3: SKU Stock Movement Timeline Modal                                -->
+<!-- ========================================================================= -->
+<div class="custom-modal-backdrop" id="skuHistoryModal" style="display: none;">
+    <div class="custom-modal-dialog glass-panel" style="max-width: 760px;">
+        <div class="custom-modal-header">
+            <div class="modal-title-wrap">
+                <span class="modal-title-icon">📜</span>
+                <div>
+                    <h3 id="skuHistoryTitle">Stock Movement Lifecycle</h3>
+                    <p class="modal-subtitle" id="skuHistorySubtitle">Complete audit trail of allocations, adjustments, and receipts</p>
+                </div>
+            </div>
+            <button class="modal-close-btn" id="closeSkuHistoryModalBtn" onclick="if(window.closeSkuHistoryModal) window.closeSkuHistoryModal();" title="Close">✕</button>
+        </div>
+
+        <div class="custom-modal-body">
+            <!-- Summary Header Banner -->
+            <div class="sku-history-banner">
+                <div class="banner-left">
+                    <span class="summary-sku-badge" id="skuHistorySkuBadge">SKU-XXXXX</span>
+                    <h4 class="summary-item-name" id="skuHistoryItemName" style="margin-top: 0.25rem;">Product Name</h4>
+                </div>
+                <div class="banner-right" style="text-align: right;">
+                    <span class="summary-stock-label" style="display: block; font-size: 0.75rem; color: var(--text-muted);">Current Physical Units</span>
+                    <strong class="summary-stock-value text-primary" id="skuHistoryCurrentStock" style="font-size: 1.3rem;">-- Units</strong>
+                </div>
+            </div>
+
+            <!-- Timeline Container -->
+            <div class="sku-timeline-wrap" id="skuTimelineContainer">
+                <p class="text-muted text-center py-4">Loading stock movements...</p>
+            </div>
+        </div>
+
+        <div class="custom-modal-footer">
+            <button type="button" class="btn btn-outline" onclick="if(window.closeSkuHistoryModal) window.closeSkuHistoryModal();">Close Timeline</button>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Toast Container -->
+<div id="inventoryToast" class="inventory-toast" style="display: none;">
+    <span id="toastIcon" class="toast-icon">✅</span>
+    <span id="toastMsg" class="toast-msg">Action completed successfully.</span>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/inventory.js') }}?v={{ range(1000, 9999) | random }}"></script>
+{% endblock %}
