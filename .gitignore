@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# Environment and Secret Files (CRITICAL: Do not commit Firebase credentials!)
+.env
+.env.local
+*.env
+serviceAccountKey.json
+*firebase-adminsdk*.json
+
+# Flask
+instance/
+.webassets-cache
+
+# Testing & Logs
+.pytest_cache/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# AI Agents, Build & Dependencies
+.agents/
+node_modules/
+dist/
+build/
+*.egg-info/
